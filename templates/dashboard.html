@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SA Airspace Monitor</title>
+    <style>
+        body { font-family: Arial; background: #111; color: #eee; margin: 0; padding: 10px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { padding: 8px; border-bottom: 1px solid #333; }
+        th { background: #222; }
+        tr.interesting { background: #5a0000; }
+        
+        /* Container that holds the progress bar and the textual status. */
+        #refresh-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            text-align: right;
+            z-index: 1000;
+        }
+
+        #refresh-bar-container {
+            width: 180px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+            margin-left: auto;
+        }
+
+        #refresh-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        #quit-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #d32f2f;
+            color: #fff;
+            border: none;
+            padding: 0;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 1000;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        #quit-btn span {
+            margin-top: -10px;
+        }
+
+        #quit-btn:hover {
+            background: #b71c1c;
+        }
+    </style>
+</head>
+<body>
+<button id="quit-btn" onclick="confirmQuit()" title="Stop App"><span>■</span></button>
+<div id="refresh-status">
+    <div id="refresh-bar-container">
+        <div id="refresh-bar"></div>
+    </div>
+    <div id="refresh-info" style="color: #ccc; font-size: 12px; line-height:1.1; text-align: right;"></div>
+</div>
+<h2>South Africa Airspace Monitor</h2>
+<table>
+<thead>
+<tr>
+<th>ICAO</th>
+<th>Callsign</th>
+<th>Reg</th>
+<th>Type</th>
+<th>Operator</th>
+<th>Lat</th>
+<th>Lon</th>
+<th>Alt</th>
+<th>Speed</th>
+</tr>
+</thead>
+<tbody id="aircraft-table"></tbody>
+</table>
+
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

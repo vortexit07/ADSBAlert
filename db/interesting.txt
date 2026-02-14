@@ -1,0 +1,27 @@
+# Military operators
+OP:Air Force
+OP:USAF
+OP:Royal
+
+# Specific aircraft types
+TYPE:C130
+TYPE:C17
+TYPE:UH1
+TYPE:UH60
+TYPE:Oryx
+TYPE:JAS39
+TYPE:C47
+TYPE:PC7
+TYPE:C172
+
+
+# Tail numbers
+REG:ZS-HLA
+REG:ZT-RTA
+REG:401
+REG:406
+REG:409
+REG:ZS-CAQ
+REG:ZS-CAS
+REG:2027
+REG:2040
