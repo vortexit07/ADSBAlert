@@ -43,8 +43,29 @@ What’s in this repo
 - `templates/` and `static/`: Web UI templates and JS assets.
 - `requirements.txt`: Python dependencies.
 
+Environment (.env)
+-------------------
+
+The application can load runtime configuration from a `.env` file placed in the project root. The file is plain `KEY=VALUE` lines (no quotes required). Example variables used by this project:
+
+- `OPENSKY_USER`: OpenSky username used for API requests. (optional)
+- `OPENSKY_PASS`: OpenSky password or API key. (optional)
+- `OPENSKY_DAILY_CREDITS`: (integer) number of API credits available per day.
+- `OPENSKY_COST_PER_REQUEST`: (integer) cost in credits per API request.
+
+Create a `.env` file like this (use your real credentials; do not commit the file to source control):
+
+```
+OPENSKY_USER=your_username
+OPENSKY_PASS=your_password_or_key
+OPENSKY_DAILY_CREDITS=4000
+OPENSKY_COST_PER_REQUEST=4
+```
+
 Notes
 -----
 
 - This README is intentionally minimal. See individual source files for implementation details and configuration.
 - If you want me to expand this README with configuration options, screenshots, or detailed deploy steps, tell me what you'd like included.
+- If using the OpenSky API anonymously, total daily credits are restricted to 400 credits
+- The credit usage for the default defined airspace is 4 credits per request, see [OpenSky API Documentation](https://openskynetwork.github.io/opensky-api/rest.html#:~:text=API%20credit%20usage) to adjust values in .env file accordingly
