@@ -8,13 +8,29 @@ from interesting import load_rules, is_interesting
 # Load .env if present
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except Exception:
     pass
 
 # Optional OpenSky credentials (will be used for HTTP Basic auth if set)
-_OS_USER = os.getenv("OPENSKY_USER")
-_OS_PASS = os.getenv("OPENSKY_PASS")
+_OPENSKY_ID = os.getenv("OPENSKY_ID")
+_OPENSKY_SECRET = os.getenv("OPENSKY_SECRET")
+
+_OAUTH_PARAMS ={
+    "content-type": "application/x-www-form-urlencoded",
+    "grant_type": "client_credentials",
+    "client_id": _OPENSKY_ID,
+    "client_secret": _OPENSKY_SECRET
+}
+
+TOKEN = requests.post(
+    "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token", data=_OAUTH_PARAMS
+)
+
+if TOKEN.status_code == 200:
+    TOKEN = TOKEN.json().get("access_token")
+    print("Successfully obtained OpenSky access token.")
 
 # Base REST URL
 _OPENSKY_BASE = "https://opensky-network.org/api"
@@ -35,7 +51,9 @@ _default_interval = int(86400 // _allowed_requests) + 1
 # Allow explicit override with CHECK_INTERVAL env var (seconds)
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", str(_default_interval)))
 
-print(f"OpenSky: daily_credits={_DAILY_CREDITS}, cost/request={_COST_PER_REQUEST}, allowed_requests/day={_allowed_requests}, check_interval={CHECK_INTERVAL}s")
+print(
+    f"OpenSky: daily_credits={_DAILY_CREDITS}, cost/request={_COST_PER_REQUEST}, allowed_requests/day={_allowed_requests}, check_interval={CHECK_INTERVAL}s"
+)
 
 live_aircraft = {}
 # Last observed remaining credits from OpenSky response header (int) or None
@@ -44,6 +62,7 @@ last_rate_limit_remaining = None
 last_fetch_time = None
 
 def fetch_aircraft():
+    print("Fetching aircraft data from OpenSky...")
     try:
         global last_rate_limit_remaining
         params = {
@@ -53,8 +72,11 @@ def fetch_aircraft():
             "lomax": SA_BOUNDS[3],
             "extended": True,
         }
-        auth = (_OS_USER, _OS_PASS) if _OS_USER and _OS_PASS else None
-        r = requests.get(f"{_OPENSKY_BASE}/states/all", params=params, auth=auth, timeout=15)
+        headers = {"Authorization": f"Bearer {TOKEN}"} if TOKEN else None
+        r = requests.get(
+            f"{_OPENSKY_BASE}/states/all", params=params, headers=headers, timeout=15
+        )
+                
         # capture remaining credits header if present
         try:
             hdr = r.headers.get("x-rate-limit-remaining")
@@ -64,6 +86,7 @@ def fetch_aircraft():
                 try:
                     # update module-level var
                     last_rate_limit_remaining = int(hdr)
+                    print(f"OpenSky remaining credits: {last_rate_limit_remaining}")
                 except Exception:
                     pass
         except Exception:
@@ -98,7 +121,11 @@ def watcher_loop():
                 lat = s.latitude
                 lon = s.longitude
                 # prefer geo_altitude when available
-                altitude = s.geo_altitude if getattr(s, "geo_altitude", None) is not None else s.baro_altitude
+                altitude = (
+                    s.geo_altitude
+                    if getattr(s, "geo_altitude", None) is not None
+                    else s.baro_altitude
+                )
                 velocity = s.velocity
             else:
                 icao24 = s[0]
