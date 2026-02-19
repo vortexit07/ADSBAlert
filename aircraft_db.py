@@ -1,8 +1,11 @@
 import csv
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 AIRCRAFT_DB_FILE = "db/aircraft.csv"
-HEXDB_URL = " https://hexdb.io/api/v1/aircraft/{}"
+HEXDB_URL = "https://hexdb.io/api/v1/aircraft/{}"
 
 _aircraft_db = {}
 _hexdb_cache = {}
@@ -14,16 +17,21 @@ def load_aircraft_db():
     if _aircraft_db:
         return
 
-    with open(AIRCRAFT_DB_FILE, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f, quotechar="'")
-        reader.fieldnames = [h.strip() for h in reader.fieldnames]
+    try:
+        with open(AIRCRAFT_DB_FILE, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f, quotechar="'")
+            reader.fieldnames = [h.strip() for h in reader.fieldnames]
 
-        for row in reader:
-            icao = row.get("icao24")
-            if icao:
-                _aircraft_db[icao.lower()] = row
+            for row in reader:
+                icao = row.get("icao24")
+                if icao:
+                    _aircraft_db[icao.lower()] = row
 
-    print(f"Loaded {len(_aircraft_db)} aircraft from DB.")
+        logger.info(f"Loaded {len(_aircraft_db)} aircraft from DB at {AIRCRAFT_DB_FILE}.")
+    except FileNotFoundError:
+        logger.error(f"Aircraft database file not found: {AIRCRAFT_DB_FILE}")
+    except Exception as e:
+        logger.error(f"Error loading aircraft database: {e}", exc_info=True)
 
 
 def format_aircraft_type(manufacturer, icao_type, type_description):
@@ -62,8 +70,8 @@ def fetch_hexdb(icao24):
                 "operator": data.get("RegisteredOwners") or "",
                 "source": "hexdb",
             }
-    except:
-        pass
+    except Exception as e:
+        logger.debug(f"HexDB lookup failed for {icao24}: {e}")
     
     return None
 
@@ -95,4 +103,13 @@ def get_aircraft_info(icao24):
         _hexdb_cache[icao24] = info
         return info
     
-    return None
+    # If no info found anywhere, create a minimal entry so the aircraft still appears
+    logger.debug(f"No aircraft info found for {icao24}, using minimal entry")
+    info = {
+        "registration": icao24.upper(),
+        "typecode": "Unknown",
+        "operator": "",
+        "source": "none",
+    }
+    _hexdb_cache[icao24] = info
+    return info
