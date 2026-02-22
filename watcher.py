@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 import threading
 import os
@@ -10,6 +11,7 @@ from interesting import load_rules, is_interesting
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Load .env if present
 try:
     from dotenv import load_dotenv
@@ -18,12 +20,14 @@ try:
 except Exception:
     pass
 
+# Discord webhook for interesting aircraft alerts
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+
 # Optional OpenSky credentials (will be used for HTTP Basic auth if set)
 _OPENSKY_ID = os.getenv("OPENSKY_ID")
 _OPENSKY_SECRET = os.getenv("OPENSKY_SECRET")
 
-TOKEN = None
-if _OPENSKY_ID and _OPENSKY_SECRET:
+def get_opensky_token(id, secret):
     try:
         _OAUTH_PARAMS = {
             "content-type": "application/x-www-form-urlencoded",
@@ -39,14 +43,24 @@ if _OPENSKY_ID and _OPENSKY_SECRET:
         )
         
         if response.status_code == 200:
-            TOKEN = response.json().get("access_token")
             logger.info("Successfully obtained OpenSky access token.")
+            return response.json().get("access_token"), datetime.now()
         else:
             logger.warning(f"Failed to get OpenSky token: {response.status_code} - {response.text}")
     except Exception as e:
         logger.warning(f"Error getting OpenSky token: {e}")
+
+TOKEN = None
+if _OPENSKY_ID and _OPENSKY_SECRET:
+    TOKEN, token_time = get_opensky_token(_OPENSKY_ID, _OPENSKY_SECRET)
 else:
     logger.info("No OpenSky credentials provided, using unauthenticated access")
+    
+def refresh_token_if_needed():
+    global TOKEN, token_time
+    if TOKEN and (datetime.now() - token_time).total_seconds() > 3600:  # Token valid for 1 hour
+        logger.info("Refreshing OpenSky access token...")
+        TOKEN, token_time = get_opensky_token(_OPENSKY_ID, _OPENSKY_SECRET)
 
 # Base REST URL
 _OPENSKY_BASE = "https://opensky-network.org/api"
@@ -79,6 +93,50 @@ live_aircraft = {}
 last_rate_limit_remaining = None
 # Timestamp of the last successful fetch (unix time ms)
 last_fetch_time = None
+# Track which aircraft we've already alerted about (to avoid duplicate notifications)
+alerted_aircraft = set()
+
+def send_discord_alert(aircraft_info):
+    """Send an alert to Discord about an interesting aircraft."""
+    if not DISCORD_WEBHOOK_URL:
+        return
+    
+    try:
+        # Format the message with aircraft details
+        icao24 = aircraft_info.get("icao24", "Unknown")
+        callsign = aircraft_info.get("callsign", "").strip() or "N/A"
+        registration = aircraft_info.get("registration", "Unknown")
+        typecode = aircraft_info.get("typecode", "Unknown")
+        operator = aircraft_info.get("operator", "Unknown")
+        lat = aircraft_info.get("lat")
+        lon = aircraft_info.get("lon")
+        altitude = aircraft_info.get("altitude")
+        velocity = aircraft_info.get("velocity")
+
+        # Create embed message for Discord
+        embed = {
+            "title": "Interesting Aircraft Detected! 🛩️",
+            "color": 0xFF0000,  # Red
+            "fields": [
+                {"name": "ICAO24", "value": icao24, "inline": True},
+                {"name": "Callsign", "value": callsign, "inline": True},
+                {"name": "Registration", "value": registration, "inline": True},
+                {"name": "Type", "value": typecode, "inline": True},
+                {"name": "Operator", "value": operator, "inline": False},
+                {"name": "Location", "value": f"{lat}, {lon}" if lat and lon else "N/A", "inline": True},
+                {"name": "Altitude (m)", "value": str(altitude) if altitude else "N/A", "inline": True},
+                {"name": "Velocity (m/s)", "value": str(velocity) if velocity else "N/A", "inline": True},
+            ],
+            "footer": {"text": "ADSBAlert"},
+        }
+
+        payload = {"embeds": [embed]}
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+        
+        if response.status_code not in (200, 204):
+            logger.warning(f"Discord webhook failed with status {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error sending Discord alert: {e}", exc_info=True)
 
 def fetch_aircraft():
     logger.info("Fetching aircraft data from OpenSky...")
@@ -126,11 +184,12 @@ def watcher_loop():
     logger.info("Watcher started.")
     load_aircraft_db()
 
-    global live_aircraft, last_fetch_time
+    global live_aircraft, last_fetch_time, alerted_aircraft
 
     while True:
         try:
             rules = load_rules()
+            refresh_token_if_needed()
             states = fetch_aircraft()
             last_fetch_time = time.time() * 1000  # ms timestamp
             logger.info(f"Fetched {len(states)} aircraft from OpenSky.")
@@ -178,9 +237,21 @@ def watcher_loop():
                     "interesting": interesting_flag,
                 }
 
+                # Send Discord alert if this is an interesting aircraft we haven't alerted about yet
+                if interesting_flag and icao24 not in alerted_aircraft:
+                    alerted_aircraft.add(icao24)
+                    logger.info(f"Interesting aircraft detected: {icao24} ({callsign or info['registration']})")
+                    send_discord_alert(updated[icao24])
+
             live_aircraft.clear()
             live_aircraft.update(updated)
             logger.debug(f"Updated live_aircraft with {len(live_aircraft)} aircraft")
+            
+            for icao in list(alerted_aircraft):
+                if icao not in live_aircraft:
+                    alerted_aircraft.remove(icao)
+                    logger.info(f"Aircraft {icao} no longer live, removed from alerted set")
+            
         except Exception as e:
             logger.error(f"Error in watcher loop: {e}", exc_info=True)
         

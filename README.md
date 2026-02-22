@@ -52,6 +52,35 @@ The application can load runtime configuration from a `.env` file placed in the 
 - `OPENSKY_PASS`: OpenSky password or API key. (optional)
 - `OPENSKY_DAILY_CREDITS`: (integer) number of API credits available per day.
 - `OPENSKY_COST_PER_REQUEST`: (integer) cost in credits per API request.
+- `DISCORD_WEBHOOK_URL`: Discord webhook URL for alerts. (optional)
+
+### Setting up Discord Alerts
+
+To receive Discord notifications when interesting aircraft are detected:
+
+1. Create a Discord channel where you want to receive alerts
+2. Create a webhook for that channel:
+   - Right-click the channel → Edit Channel
+   - Go to Integrations → Webhooks → New Webhook
+   - Copy the webhook URL
+3. Add it to your `.env` file:
+
+```
+DISCORD_WEBHOOK_URL=https://discordapp.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+```
+
+When an interesting aircraft appears, the app will send a formatted embed message to your Discord channel with:
+- Aircraft ICAO24 code
+- Callsign
+- Registration (tail number)
+- Aircraft type
+- Operator
+- Current location (lat/lon)
+- Altitude and velocity
+
+Each aircraft is only alerted once per session (the watcher tracks alerted aircraft in memory).
+
+### Example .env file
 
 Create a `.env` file like this (use your real credentials; do not commit the file to source control):
 
@@ -60,6 +89,7 @@ OPENSKY_USER=your_username
 OPENSKY_PASS=your_password_or_key
 OPENSKY_DAILY_CREDITS=4000
 OPENSKY_COST_PER_REQUEST=4
+DISCORD_WEBHOOK_URL=https://discordapp.com/api/webhooks/YOUR_ID/YOUR_TOKEN
 ```
 
 Notes

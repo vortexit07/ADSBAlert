@@ -52,7 +52,7 @@ async function loadData() {
 
     row.innerHTML = `
             <td>${ac.icao24}</td>
-            <td> <a href="https://flightradar24.com/${ac.registration}/" target="_blank" rel="noopener noreferrer"/>${ac.callsign || ac.registration}</td>
+            <td> <a href="https://flightradar24.com/${ac.callsign}/" target="_blank" rel="noopener noreferrer">${ac.callsign || ac.registration}</a></td>
             <td>${ac.registration}</td>
             <td>${ac.typecode}</td>
             <td>${ac.operator}</td>

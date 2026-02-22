@@ -8,7 +8,7 @@ import logging
 logfile = os.path.join(os.path.dirname(__file__), "tray.log")
 logging.basicConfig(
     filename=logfile,
-    level=logging.DEBUG,
+    level=logging.CRITICAL,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
 )
 logging.info("ADSBAlert tray launcher starting")
