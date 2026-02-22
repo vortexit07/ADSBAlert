@@ -8,7 +8,7 @@ import logging
 logfile = os.path.join(os.path.dirname(__file__), "tray.log")
 logging.basicConfig(
     filename=logfile,
-    level=logging.CRITICAL,
+    level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
 )
 logging.info("ADSBAlert tray launcher starting")
@@ -16,7 +16,7 @@ logging.info("ADSBAlert tray launcher starting")
 # Import the Flask `app` and `watcher` module
 try:
     from app import app as flask_app
-    import watcher
+    import watcher  
 except Exception as e:
     logging.error(f"Failed to import modules: {e}", exc_info=True)
     sys.exit(1)
