@@ -200,6 +200,8 @@ def fetch_aircraft():
 
         if r.status_code != 200:
             logger.warning(f"OpenSky API returned {r.status_code}: {r.text}")
+            if r.status_code == 401:
+                refresh_token_if_needed()  # Try refreshing token if unauthorized
             return []
         data = r.json()
         states = data.get("states", [])
