@@ -3,7 +3,6 @@ OP:Air Force
 OP:USAF
 
 # Specific aircraft types
-TYPE:C130
 TYPE:C17
 TYPE:UH1
 TYPE:UH60
@@ -17,6 +16,8 @@ TYPE:PC7
 REG:ZS-HLA
 REG:ZT-RTA
 REG:ZS-HLJ
+REG:ZS-TMT
+REG:ZS-HHK
 
 # SAAF Aircraft
 REG:401

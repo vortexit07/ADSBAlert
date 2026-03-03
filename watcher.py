@@ -61,8 +61,12 @@ else:
     logger.info("No OpenSky credentials provided, using unauthenticated access")
 
 
-def refresh_token_if_needed():
+def refresh_token_if_needed(bypass_time_check=False):
     global TOKEN, token_time
+    if bypass_time_check:
+        logger.info("Bypassing token time check, forcing refresh")
+        TOKEN, token_time = get_opensky_token(_OPENSKY_ID, _OPENSKY_SECRET)
+        return
     if (
         TOKEN and (datetime.now() - token_time).total_seconds() > 3600
     ):  # Token valid for 1 hour
@@ -201,7 +205,7 @@ def fetch_aircraft():
         if r.status_code != 200:
             logger.warning(f"OpenSky API returned {r.status_code}: {r.text}")
             if r.status_code == 401:
-                refresh_token_if_needed()  # Try refreshing token if unauthorized
+                refresh_token_if_needed(True)  # Try refreshing token if unauthorized
             return []
         data = r.json()
         states = data.get("states", [])
